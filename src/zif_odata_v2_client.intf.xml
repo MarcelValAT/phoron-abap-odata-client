@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_INTF" serializer_version="v1.0.0">
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOINTERF>
     <CLSNAME>ZIF_ODATA_V2_CLIENT</CLSNAME>
     <LANGU>D</LANGU>
-    <DESCRIPT>Generisches OData V2 CRUD-Interface (read/create/update/delete)</DESCRIPT>
+    <DESCRIPT>Generisches OData V2 CRUD-Interface (read/create/update/dele</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>X</UNICODE>

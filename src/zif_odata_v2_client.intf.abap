@@ -14,6 +14,13 @@ INTERFACE zif_odata_v2_client
     END OF ty_filter.
   TYPES tt_filter TYPE STANDARD TABLE OF ty_filter WITH EMPTY KEY.
 
+  TYPES:
+    BEGIN OF ty_key_pair,
+      name  TYPE string,
+      value TYPE string,
+    END OF ty_key_pair.
+    TYPES tt_key_pairs TYPE STANDARD TABLE OF ty_key_pair WITH EMPTY KEY.
+
   " Liest eine Liste von Entitäten mit optionalem Filter, $top und $skip
   " ct_data: typisierte Tabelle des Entity-Typs (z.B. TABLE OF tys_...)
   METHODS read_list
@@ -31,7 +38,7 @@ INTERFACE zif_odata_v2_client
   " Beispiel: VALUE #( ( name = 'BusinessPartner' value = '0001' ) )
   METHODS read_entity
     IMPORTING
-      it_key  TYPE /iwbep/t_mgw_tech_pairs
+      it_key  TYPE tt_key_pairs
     CHANGING
       cs_data TYPE ANY
     RAISING
@@ -50,7 +57,7 @@ INTERFACE zif_odata_v2_client
   " iv_use_put: ABAP_TRUE = PUT (Standard), ABAP_FALSE = PATCH
   METHODS update_entity
     IMPORTING
-      it_key     TYPE /iwbep/t_mgw_tech_pairs
+      it_key     TYPE tt_key_pairs
       is_data    TYPE ANY
       iv_use_put TYPE abap_bool DEFAULT abap_true
     RAISING
@@ -60,7 +67,7 @@ INTERFACE zif_odata_v2_client
   " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
   METHODS delete_entity
     IMPORTING
-      it_key TYPE /iwbep/t_mgw_tech_pairs
+      it_key TYPE tt_key_pairs
     RAISING
       zcx_odata_v2_error.
 

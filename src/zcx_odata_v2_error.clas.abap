@@ -23,7 +23,10 @@ CLASS zcx_odata_v2_error DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_odata_v2_error IMPLEMENTATION.
+
+
+CLASS ZCX_ODATA_V2_ERROR IMPLEMENTATION.
+
 
   METHOD constructor.
     super->constructor( previous = previous ).
@@ -31,6 +34,7 @@ CLASS zcx_odata_v2_error IMPLEMENTATION.
     me->mv_entity_set  = iv_entity_set.
     me->mv_http_status = iv_http_status.
   ENDMETHOD.
+
 
   METHOD get_text.
     DATA lv_prev_text TYPE string.
@@ -47,5 +51,4 @@ CLASS zcx_odata_v2_error IMPLEMENTATION.
       result = |{ mv_operation } { mv_entity_set }: Unbekannter Fehler|.
     ENDIF.
   ENDMETHOD.
-
 ENDCLASS.

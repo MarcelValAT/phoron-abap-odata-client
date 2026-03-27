@@ -40,15 +40,20 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== READ LIST ===' ).
     TRY.
-        DATA lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
+        DATA:
+            lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ,
+            lt_filter  TYPE zif_odata_v2_client=>tt_filter.
+
+        lt_filter = VALUE #( ( property_path = 'DunningRun'  sign = 'I' option = 'EQ' low = 'HEHO' )
+                             ( property_path = 'CompanyCode' sign = 'I' option = 'EQ' low = '3910' ) ).
 
         lo_client->read_list(
-          it_filter = VALUE #(
-            ( property_path = 'DunningRun'  sign = 'I' option = 'EQ' low = 'HEHO' )
-            ( property_path = 'CompanyCode' sign = 'I' option = 'EQ' low = '3910' ) )
-          iv_top    = 5
-          iv_skip   = 0
-          CHANGING ct_data = lt_entries ).
+            EXPORTING
+                it_filter = lt_filter
+                iv_top    = 5
+                iv_skip   = 0
+            CHANGING
+                ct_data = lt_entries ).
 
         out->write( |READ LIST: { lines( lt_entries ) } Einträge geladen.| ).
 
@@ -71,7 +76,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     out->write( '=== READ ENTITY ===' ).
     TRY.
         " Key als OData Name-Value-Paare (CamelCase Property-Namen aus OData Metadata)
-        DATA lt_key TYPE /iwbep/t_mgw_tech_pairs.
+        DATA lt_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_key = VALUE #(
           ( name = 'DunningRunDate'           value = '20240310' )
           ( name = 'DunningRun'               value = 'HEHO' )
@@ -133,7 +138,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== UPDATE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA lt_upd_key TYPE /iwbep/t_mgw_tech_pairs.
+        DATA lt_upd_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_upd_key = VALUE #(
           ( name = 'DunningRunDate'       value = '20240310' )
           ( name = 'DunningRun'           value = 'HEHO' )
@@ -175,7 +180,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== DELETE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA lt_del_key TYPE /iwbep/t_mgw_tech_pairs.
+        DATA lt_del_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_del_key = VALUE #(
           ( name = 'DunningRunDate'       value = '20240310' )
           ( name = 'DunningRun'           value = 'HEHO' )

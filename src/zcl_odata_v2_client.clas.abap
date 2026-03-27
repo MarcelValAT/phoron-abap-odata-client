@@ -31,7 +31,7 @@ CLASS zcl_odata_v2_client DEFINITION
     TYPES tt_range_entries TYPE STANDARD TABLE OF ty_range_entry WITH EMPTY KEY.
 
     DATA mo_client_proxy TYPE REF TO /iwbep/if_cp_client_proxy.
-    DATA mv_entity_set   TYPE string.
+    DATA mv_entity_set   TYPE /iwbep/if_cp_runtime_types=>ty_entity_set_name.
 
     " Baut den OData Filter-Baum aus der generischen Filter-Tabelle
     METHODS build_filter_node
@@ -41,7 +41,8 @@ CLASS zcl_odata_v2_client DEFINITION
       RETURNING
         VALUE(ro_node)      TYPE REF TO /iwbep/if_cp_filter_node
       RAISING
-        zcx_odata_v2_error.
+        zcx_odata_v2_error
+        /iwbep/cx_gateway.
 
 ENDCLASS.
 
@@ -80,7 +81,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             iv_relative_service_root = '' ).
 
       CATCH cx_http_dest_provider_error
-            cx_web_http_client_error INTO DATA(lx).
+            cx_web_http_client_error
+            /IWBEP/CX_GATEWAY INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'INIT'
@@ -93,8 +95,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~read_list.
     TRY.
         " Request für Read List vorbereiten
-        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )
-                                          ->create_request_for_read( ).
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_read( ).
 
         " Optionalen Filter setzen
         IF it_filter IS NOT INITIAL.
@@ -121,12 +122,11 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
-            /iwbep/cx_cp_configuration
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'READ_LIST'
-            iv_entity_set = mv_entity_set
+            iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -135,22 +135,17 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~read_entity.
     TRY.
         " Einzelne Entität per Key navigieren und lesen
-        DATA(lo_response) = mo_client_proxy
-          ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( it_key )
-          ->create_request_for_read( )
-          ->execute( ).
+          DATA(lo_response) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_read( )->execute( ).
 
         lo_response->get_business_data( IMPORTING es_business_data = cs_data ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
-            /iwbep/cx_cp_configuration
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'READ_ENTITY'
-            iv_entity_set = mv_entity_set
+            iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -159,21 +154,18 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~create_entity.
     TRY.
         " Neue Entität erstellen
-        DATA(lo_request) = mo_client_proxy
-          ->create_resource_for_entity_set( mv_entity_set )
-          ->create_request_for_create( ).
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
 
         lo_request->set_business_data( is_data ).
         lo_request->execute( ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
-            /iwbep/cx_cp_configuration
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'CREATE'
-            iv_entity_set = mv_entity_set
+            iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -188,22 +180,18 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
           ELSE /iwbep/if_cp_request_update=>gcs_update_semantic-patch ).
 
         " Entität per Key navigieren und updaten
-        DATA(lo_request) = mo_client_proxy
-          ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( it_key )
-          ->create_request_for_update( lv_semantic ).
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_update( lv_semantic ).
 
         lo_request->set_business_data( is_data ).
         lo_request->execute( ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
-            /iwbep/cx_cp_configuration
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'UPDATE'
-            iv_entity_set = mv_entity_set
+            iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -212,20 +200,15 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~delete_entity.
     TRY.
         " Entität per Key navigieren und löschen
-        mo_client_proxy
-          ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( it_key )
-          ->create_request_for_delete( )
-          ->execute( ).
+        mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_delete( )->execute( ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
-            /iwbep/cx_cp_configuration
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'DELETE'
-            iv_entity_set = mv_entity_set
+            iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
