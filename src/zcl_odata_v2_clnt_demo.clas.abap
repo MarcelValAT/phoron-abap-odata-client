@@ -44,8 +44,10 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
             lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ,
             lt_filter  TYPE zif_odata_v2_client=>tt_filter.
 
-        lt_filter = VALUE #( ( property_path = 'DunningRun'  sign = 'I' option = 'EQ' low = 'HEHO' )
-                             ( property_path = 'CompanyCode' sign = 'I' option = 'EQ' low = '3910' ) ).
+        " WICHTIG: property_path IMMER GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname-Konvention)
+        " z.B. 'DUNNING_RUN' und NICHT 'DunningRun' — sonst: Eigenschaft nicht gefunden!
+        lt_filter = VALUE #( ( property_path = 'DUNNING_RUN'  sign = 'I' option = 'EQ' low = 'HEHO' )
+                             ( property_path = 'COMPANY_CODE' sign = 'I' option = 'EQ' low = '3910' ) ).
 
         lo_client->read_list(
             EXPORTING
@@ -75,20 +77,21 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== READ ENTITY ===' ).
     TRY.
-        " Key als OData Name-Value-Paare (CamelCase Property-Namen aus OData Metadata)
+        " Key als Name-Value-Paare: name = GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname)
+        " NICHT CamelCase! 'DUNNING_RUN_DATE' korrekt, 'DunningRunDate' führt zu Laufzeitfehler.
         DATA lt_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_key = VALUE #(
-          ( name = 'DunningRunDate'           value = '20240310' )
-          ( name = 'DunningRun'               value = 'HEHO' )
-          ( name = 'FinancialAccountType'     value = 'D' )
-          ( name = 'CompanyCode'              value = '3910' )
-          ( name = 'Customer'                 value = '0001000010' )
-          ( name = 'Supplier'                 value = '' )
-          ( name = 'OneTimeAcctBankAccount'   value = '' )
-          ( name = 'CustomerHeadOffice'       value = '' )
-          ( name = 'GroupingDunningArea'      value = '' )
-          ( name = 'GroupingDunningLevel'     value = '' )
-          ( name = 'DunningClerk'             value = '' ) ).
+          ( name = 'DUNNING_RUN_DATE'             value = '20240310' )
+          ( name = 'DUNNING_RUN'                  value = 'HEHO' )
+          ( name = 'FINANCIAL_ACCOUNT_TYPE'        value = 'D' )
+          ( name = 'COMPANY_CODE'                 value = '3910' )
+          ( name = 'CUSTOMER'                     value = '0001000010' )
+          ( name = 'SUPPLIER'                     value = '' )
+          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT'   value = '' )
+          ( name = 'CUSTOMER_HEAD_OFFICE'         value = '' )
+          ( name = 'GROUPING_DUNNING_AREA'        value = '' )
+          ( name = 'GROUPING_DUNNING_LEVEL'       value = '' )
+          ( name = 'DUNNING_CLERK'                value = '' ) ).
 
         DATA ls_result TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
 
@@ -140,17 +143,17 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     TRY.
         DATA lt_upd_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_upd_key = VALUE #(
-          ( name = 'DunningRunDate'       value = '20240310' )
-          ( name = 'DunningRun'           value = 'HEHO' )
-          ( name = 'FinancialAccountType' value = 'D' )
-          ( name = 'CompanyCode'          value = '3910' )
-          ( name = 'Customer'             value = '0001000010' )
-          ( name = 'Supplier'             value = '' )
-          ( name = 'OneTimeAcctBankAccount' value = '' )
-          ( name = 'CustomerHeadOffice'   value = '' )
-          ( name = 'GroupingDunningArea'  value = '' )
-          ( name = 'GroupingDunningLevel' value = '' )
-          ( name = 'DunningClerk'         value = '' ) ).
+          ( name = 'DUNNING_RUN_DATE'           value = '20240310' )
+          ( name = 'DUNNING_RUN'                value = 'HEHO' )
+          ( name = 'FINANCIAL_ACCOUNT_TYPE'     value = 'D' )
+          ( name = 'COMPANY_CODE'               value = '3910' )
+          ( name = 'CUSTOMER'                   value = '0001000010' )
+          ( name = 'SUPPLIER'                   value = '' )
+          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT' value = '' )
+          ( name = 'CUSTOMER_HEAD_OFFICE'       value = '' )
+          ( name = 'GROUPING_DUNNING_AREA'      value = '' )
+          ( name = 'GROUPING_DUNNING_LEVEL'     value = '' )
+          ( name = 'DUNNING_CLERK'              value = '' ) ).
 
         DATA ls_upd_data TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
         ls_upd_data-dunning_run_date       = '20240310'.
@@ -182,17 +185,17 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     TRY.
         DATA lt_del_key TYPE zif_odata_v2_client=>tt_key_pairs.
         lt_del_key = VALUE #(
-          ( name = 'DunningRunDate'       value = '20240310' )
-          ( name = 'DunningRun'           value = 'HEHO' )
-          ( name = 'FinancialAccountType' value = 'D' )
-          ( name = 'CompanyCode'          value = '3910' )
-          ( name = 'Customer'             value = '0001000010' )
-          ( name = 'Supplier'             value = '' )
-          ( name = 'OneTimeAcctBankAccount' value = '' )
-          ( name = 'CustomerHeadOffice'   value = '' )
-          ( name = 'GroupingDunningArea'  value = '' )
-          ( name = 'GroupingDunningLevel' value = '' )
-          ( name = 'DunningClerk'         value = '' ) ).
+          ( name = 'DUNNING_RUN_DATE'           value = '20240310' )
+          ( name = 'DUNNING_RUN'                value = 'HEHO' )
+          ( name = 'FINANCIAL_ACCOUNT_TYPE'     value = 'D' )
+          ( name = 'COMPANY_CODE'               value = '3910' )
+          ( name = 'CUSTOMER'                   value = '0001000010' )
+          ( name = 'SUPPLIER'                   value = '' )
+          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT' value = '' )
+          ( name = 'CUSTOMER_HEAD_OFFICE'       value = '' )
+          ( name = 'GROUPING_DUNNING_AREA'      value = '' )
+          ( name = 'GROUPING_DUNNING_LEVEL'     value = '' )
+          ( name = 'DUNNING_CLERK'              value = '' ) ).
 
         lo_client->delete_entity( lt_del_key ).
         out->write( 'DELETE ENTITY: Eintrag gelöscht.' ).

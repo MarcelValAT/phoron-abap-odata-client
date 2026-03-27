@@ -2,7 +2,8 @@ INTERFACE zif_odata_v2_client
   PUBLIC.
 
   " Filter-Typ für read_list (OData $filter)
-  " property_path: OData Property-Name (CamelCase, z.B. 'DunningRunDate')
+  " property_path: ABAP-Feldname GROSSBUCHSTABEN mit Underscores — z.B. 'DUNNING_RUN_DATE'
+  " ACHTUNG: NICHT CamelCase! 'DunningRunDate' → Laufzeitfehler 'Eigenschaft nicht gefunden'
   " sign/option/low/high: wie ABAP RANGE-Tabelle (I/E, EQ/NE/LT/LE/GT/GE/BT/CP)
   TYPES:
     BEGIN OF ty_filter,
@@ -34,8 +35,8 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Liest eine einzelne Entität per Key (navigate_with_key)
-  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
-  " Beispiel: VALUE #( ( name = 'BusinessPartner' value = '0001' ) )
+  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
+  " Beispiel: VALUE #( ( name = 'BUSINESS_PARTNER' value = '0001' ) )
   METHODS read_entity
     IMPORTING
       it_key  TYPE tt_key_pairs
@@ -53,7 +54,7 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Aktualisiert eine Entität per Key + neue Daten
-  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
+  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
   " iv_use_put: ABAP_TRUE = PUT (Standard), ABAP_FALSE = PATCH
   METHODS update_entity
     IMPORTING
@@ -64,7 +65,7 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Löscht eine Entität per Key
-  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
+  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
   METHODS delete_entity
     IMPORTING
       it_key TYPE tt_key_pairs
