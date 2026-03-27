@@ -26,11 +26,12 @@ INTERFACE zif_odata_v2_client
     RAISING
       zcx_odata_v2_error.
 
-  " Liest eine einzelne Entität per Key-Struktur (navigate_with_key)
-  " is_key: Struktur mit Key-Feldern des Entity-Typs
+  " Liest eine einzelne Entität per Key (navigate_with_key)
+  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
+  " Beispiel: VALUE #( ( name = 'BusinessPartner' value = '0001' ) )
   METHODS read_entity
     IMPORTING
-      is_key  TYPE ANY
+      it_key  TYPE /iwbep/t_mgw_tech_pairs
     CHANGING
       cs_data TYPE ANY
     RAISING
@@ -45,19 +46,21 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Aktualisiert eine Entität per Key + neue Daten
+  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
   " iv_use_put: ABAP_TRUE = PUT (Standard), ABAP_FALSE = PATCH
   METHODS update_entity
     IMPORTING
-      is_key     TYPE ANY
+      it_key     TYPE /iwbep/t_mgw_tech_pairs
       is_data    TYPE ANY
       iv_use_put TYPE abap_bool DEFAULT abap_true
     RAISING
       zcx_odata_v2_error.
 
-  " Löscht eine Entität per Key-Struktur
+  " Löscht eine Entität per Key
+  " it_key: OData Key-Felder als Name-Value-Paare (CamelCase Property-Namen)
   METHODS delete_entity
     IMPORTING
-      is_key TYPE ANY
+      it_key TYPE /iwbep/t_mgw_tech_pairs
     RAISING
       zcx_odata_v2_error.
 

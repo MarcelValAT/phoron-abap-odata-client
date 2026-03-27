@@ -137,7 +137,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
         " Einzelne Entität per Key navigieren und lesen
         DATA(lo_response) = mo_client_proxy
           ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( is_key )
+          ->navigate_with_key( it_key )
           ->create_request_for_read( )
           ->execute( ).
 
@@ -190,7 +190,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
         " Entität per Key navigieren und updaten
         DATA(lo_request) = mo_client_proxy
           ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( is_key )
+          ->navigate_with_key( it_key )
           ->create_request_for_update( lv_semantic ).
 
         lo_request->set_business_data( is_data ).
@@ -214,7 +214,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
         " Entität per Key navigieren und löschen
         mo_client_proxy
           ->create_resource_for_entity_set( mv_entity_set )
-          ->navigate_with_key( is_key )
+          ->navigate_with_key( it_key )
           ->create_request_for_delete( )
           ->execute( ).
 
