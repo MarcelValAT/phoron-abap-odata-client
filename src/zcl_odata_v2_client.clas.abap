@@ -20,16 +20,6 @@ CLASS zcl_odata_v2_client DEFINITION
 
   PROTECTED SECTION.
   PRIVATE SECTION.
-    " Kompatibler Range-Typ für OData Filter-Factory create_by_range()
-    TYPES:
-      BEGIN OF ty_range_entry,
-        sign   TYPE c LENGTH 1,
-        option TYPE c LENGTH 2,
-        low    TYPE string,
-        high   TYPE string,
-      END OF ty_range_entry.
-    TYPES tt_range_entries TYPE STANDARD TABLE OF ty_range_entry WITH EMPTY KEY.
-
     DATA mo_client_proxy TYPE REF TO /iwbep/if_cp_client_proxy.
     DATA mv_entity_set   TYPE /iwbep/if_cp_runtime_types=>ty_entity_set_name.
 
@@ -221,7 +211,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
     SORT lt_filter BY property_path.
 
     DATA lv_prev_path     TYPE string.
-    DATA lt_range         TYPE tt_range_entries.
+    DATA lt_range         TYPE RANGE OF string.
     DATA lo_current_node  TYPE REF TO /iwbep/if_cp_filter_node.
 
     LOOP AT lt_filter INTO DATA(ls_filter).
