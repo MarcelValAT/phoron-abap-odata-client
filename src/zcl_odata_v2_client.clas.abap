@@ -83,8 +83,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'INIT'
-            mv_entity_set = iv_entity_set
+            iv_operation  = 'INIT'
+            iv_entity_set = iv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -125,8 +125,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'READ_LIST'
-            mv_entity_set = mv_entity_set
+            iv_operation  = 'READ_LIST'
+            iv_entity_set = mv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -149,8 +149,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'READ_ENTITY'
-            mv_entity_set = mv_entity_set
+            iv_operation  = 'READ_ENTITY'
+            iv_entity_set = mv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -172,8 +172,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'CREATE'
-            mv_entity_set = mv_entity_set
+            iv_operation  = 'CREATE'
+            iv_entity_set = mv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -202,8 +202,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'UPDATE'
-            mv_entity_set = mv_entity_set
+            iv_operation  = 'UPDATE'
+            iv_entity_set = mv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
@@ -224,8 +224,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            mv_operation  = 'DELETE'
-            mv_entity_set = mv_entity_set
+            iv_operation  = 'DELETE'
+            iv_entity_set = mv_entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.

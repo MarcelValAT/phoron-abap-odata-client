@@ -43,7 +43,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
         DATA lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
 
         lo_client->read_list(
-          it_filter = VALUE zif_odata_v2_client=>tt_filter(
+          it_filter = VALUE #(
             ( property_path = 'DunningRun'  sign = 'I' option = 'EQ' low = 'HEHO' )
             ( property_path = 'CompanyCode' sign = 'I' option = 'EQ' low = '3910' ) )
           iv_top    = 5
