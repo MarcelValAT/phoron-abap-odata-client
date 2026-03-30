@@ -36,7 +36,7 @@ CLASS zcl_odata_api_config DEFINITION
         comm_scenario  TYPE string VALUE 'ZCS_ODATA_CRUD_OB',
         service_id     TYPE string VALUE 'ZOBS_ODATA_CRUD_REST',
         proxy_model_id TYPE string VALUE 'ZSCM_ODATA_CRUD_TS',
-        entity_set     TYPE string VALUE 'TimeSheetCollection',
+        entity_set     TYPE string VALUE 'TimeSheetEntryCollection',
         comm_system_id TYPE string VALUE 'ZMV_API_INTF_TEST_SYS',
         proxy_version  TYPE string VALUE '0001',
       END OF timesheet_entry.
