@@ -77,14 +77,16 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== READ ENTITY ===' ).
     TRY.
-        " Key als typisierter Entity-Struct — navigate_with_key liest Key-Felder aus Proxy-Modell
-        " Nur Key-Felder setzen, Rest bleibt initial
-        DATA ls_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
-        ls_key-dunning_run_date       = '20240310'.
-        ls_key-dunning_run            = 'HEHO'.
-        ls_key-financial_account_type = 'D'.
-        ls_key-company_code           = '3910'.
-        ls_key-customer               = '0001000010'.
+        " Key direkt aus READ LIST Ergebnis nehmen — garantiert korrekte Werte für alle 11 Key-Felder.
+        " ACHTUNG: Keinen Key manuell hartcodieren! OData braucht alle Key-Felder exakt wie in der DB.
+        " Falsche Werte (z.B. '0001000010' statt '1000010') oder ein falsches leeres Feld → HTTP 404.
+        IF lt_entries IS INITIAL.
+          out->write( 'READ ENTITY: keine Einträge aus READ LIST — übersprungen.' ).
+          RETURN.
+        ENDIF.
+
+        DATA ls_key LIKE lt_entries[ 1 ].
+        ls_key = lt_entries[ 1 ].  " ersten Eintrag als Key verwenden
 
         DATA ls_result TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
 
@@ -134,12 +136,9 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== UPDATE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA ls_upd_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
-        ls_upd_key-dunning_run_date       = '20240310'.
-        ls_upd_key-dunning_run            = 'HEHO'.
-        ls_upd_key-financial_account_type = 'D'.
-        ls_upd_key-company_code           = '3910'.
-        ls_upd_key-customer               = '0001000010'.
+        " Key aus READ LIST Ergebnis — alle 11 Felder korrekt
+        DATA ls_upd_key LIKE lt_entries[ 1 ].
+        ls_upd_key = lt_entries[ 1 ].
 
         DATA ls_upd_data TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
         ls_upd_data-dunning_run_date       = '20240310'.
@@ -169,12 +168,9 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== DELETE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA ls_del_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
-        ls_del_key-dunning_run_date       = '20240310'.
-        ls_del_key-dunning_run            = 'HEHO'.
-        ls_del_key-financial_account_type = 'D'.
-        ls_del_key-company_code           = '3910'.
-        ls_del_key-customer               = '0001000010'.
+        " Key aus READ LIST Ergebnis — alle 11 Felder korrekt
+        DATA ls_del_key LIKE lt_entries[ 1 ].
+        ls_del_key = lt_entries[ 1 ].
 
         lo_client->delete_entity( ls_del_key ).
         out->write( 'DELETE ENTITY: Eintrag gelöscht.' ).
