@@ -85,8 +85,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        DATA ls_key LIKE lt_entries[ 1 ].
-        ls_key = lt_entries[ 1 ].  " ersten Eintrag als Key verwenden
+        DATA(ls_key) = lt_entries[ 1 ].  " ersten Eintrag aus READ_LIST als Key verwenden
 
         DATA ls_result TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
 
@@ -137,8 +136,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     out->write( '=== UPDATE ENTITY (ggf. read-only) ===' ).
     TRY.
         " Key aus READ LIST Ergebnis — alle 11 Felder korrekt
-        DATA ls_upd_key LIKE lt_entries[ 1 ].
-        ls_upd_key = lt_entries[ 1 ].
+        DATA(ls_upd_key) = lt_entries[ 1 ].
 
         DATA ls_upd_data TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
         ls_upd_data-dunning_run_date       = '20240310'.
@@ -169,8 +167,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     out->write( '=== DELETE ENTITY (ggf. read-only) ===' ).
     TRY.
         " Key aus READ LIST Ergebnis — alle 11 Felder korrekt
-        DATA ls_del_key LIKE lt_entries[ 1 ].
-        ls_del_key = lt_entries[ 1 ].
+        DATA(ls_del_key) = lt_entries[ 1 ].
 
         lo_client->delete_entity( ls_del_key ).
         out->write( 'DELETE ENTITY: Eintrag gelöscht.' ).
