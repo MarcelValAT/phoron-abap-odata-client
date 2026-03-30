@@ -15,13 +15,6 @@ INTERFACE zif_odata_v2_client
     END OF ty_filter.
   TYPES tt_filter TYPE STANDARD TABLE OF ty_filter WITH EMPTY KEY.
 
-  TYPES:
-    BEGIN OF ty_key_pair,
-      name  TYPE string,
-      value TYPE string,
-    END OF ty_key_pair.
-    TYPES tt_key_pairs TYPE STANDARD TABLE OF ty_key_pair WITH EMPTY KEY.
-
   " Liest eine Liste von Entitäten mit optionalem Filter, $top und $skip
   " ct_data: typisierte Tabelle des Entity-Typs (z.B. TABLE OF tys_...)
   METHODS read_list
@@ -35,11 +28,11 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Liest eine einzelne Entität per Key (navigate_with_key)
-  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
-  " Beispiel: VALUE #( ( name = 'BUSINESS_PARTNER' value = '0001' ) )
+  " is_key: typisierter Entity-Struct mit gesetzten Key-Feldern (wie SAP Sample Code)
+  " Nicht-Key-Felder bleiben leer/initial. navigate_with_key liest Key-Felder aus dem Proxy-Modell.
   METHODS read_entity
     IMPORTING
-      it_key  TYPE tt_key_pairs
+      is_key  TYPE ANY
     CHANGING
       cs_data TYPE ANY
     RAISING
@@ -54,21 +47,21 @@ INTERFACE zif_odata_v2_client
       zcx_odata_v2_error.
 
   " Aktualisiert eine Entität per Key + neue Daten
-  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
+  " is_key: typisierter Entity-Struct mit gesetzten Key-Feldern
   " iv_use_put: ABAP_TRUE = PUT (Standard), ABAP_FALSE = PATCH
   METHODS update_entity
     IMPORTING
-      it_key     TYPE tt_key_pairs
+      is_key     TYPE ANY
       is_data    TYPE ANY
       iv_use_put TYPE abap_bool DEFAULT abap_true
     RAISING
       zcx_odata_v2_error.
 
   " Löscht eine Entität per Key
-  " it_key: Key-Felder als Name-Value-Paare — name = GROSSBUCHSTABEN mit Underscores
+  " is_key: typisierter Entity-Struct mit gesetzten Key-Feldern
   METHODS delete_entity
     IMPORTING
-      it_key TYPE tt_key_pairs
+      is_key TYPE ANY
     RAISING
       zcx_odata_v2_error.
 

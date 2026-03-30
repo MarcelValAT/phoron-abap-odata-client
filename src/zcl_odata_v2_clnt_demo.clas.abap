@@ -77,26 +77,19 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== READ ENTITY ===' ).
     TRY.
-        " Key als Name-Value-Paare: name = GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname)
-        " NICHT CamelCase! 'DUNNING_RUN_DATE' korrekt, 'DunningRunDate' führt zu Laufzeitfehler.
-        DATA lt_key TYPE zif_odata_v2_client=>tt_key_pairs.
-        lt_key = VALUE #(
-          ( name = 'DUNNING_RUN_DATE'             value = '20240310' )
-          ( name = 'DUNNING_RUN'                  value = 'HEHO' )
-          ( name = 'FINANCIAL_ACCOUNT_TYPE'        value = 'D' )
-          ( name = 'COMPANY_CODE'                 value = '3910' )
-          ( name = 'CUSTOMER'                     value = '0001000010' )
-          ( name = 'SUPPLIER'                     value = '' )
-          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT'   value = '' )
-          ( name = 'CUSTOMER_HEAD_OFFICE'         value = '' )
-          ( name = 'GROUPING_DUNNING_AREA'        value = '' )
-          ( name = 'GROUPING_DUNNING_LEVEL'       value = '' )
-          ( name = 'DUNNING_CLERK'                value = '' ) ).
+        " Key als typisierter Entity-Struct — navigate_with_key liest Key-Felder aus Proxy-Modell
+        " Nur Key-Felder setzen, Rest bleibt initial
+        DATA ls_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
+        ls_key-dunning_run_date       = '20240310'.
+        ls_key-dunning_run            = 'HEHO'.
+        ls_key-financial_account_type = 'D'.
+        ls_key-company_code           = '3910'.
+        ls_key-customer               = '0001000010'.
 
         DATA ls_result TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
 
         lo_client->read_entity(
-          EXPORTING it_key  = lt_key
+          EXPORTING is_key  = ls_key
           CHANGING  cs_data = ls_result ).
 
         out->write( |READ ENTITY: Kunde { ls_result-customer } | &
@@ -141,19 +134,12 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== UPDATE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA lt_upd_key TYPE zif_odata_v2_client=>tt_key_pairs.
-        lt_upd_key = VALUE #(
-          ( name = 'DUNNING_RUN_DATE'           value = '20240310' )
-          ( name = 'DUNNING_RUN'                value = 'HEHO' )
-          ( name = 'FINANCIAL_ACCOUNT_TYPE'     value = 'D' )
-          ( name = 'COMPANY_CODE'               value = '3910' )
-          ( name = 'CUSTOMER'                   value = '0001000010' )
-          ( name = 'SUPPLIER'                   value = '' )
-          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT' value = '' )
-          ( name = 'CUSTOMER_HEAD_OFFICE'       value = '' )
-          ( name = 'GROUPING_DUNNING_AREA'      value = '' )
-          ( name = 'GROUPING_DUNNING_LEVEL'     value = '' )
-          ( name = 'DUNNING_CLERK'              value = '' ) ).
+        DATA ls_upd_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
+        ls_upd_key-dunning_run_date       = '20240310'.
+        ls_upd_key-dunning_run            = 'HEHO'.
+        ls_upd_key-financial_account_type = 'D'.
+        ls_upd_key-company_code           = '3910'.
+        ls_upd_key-customer               = '0001000010'.
 
         DATA ls_upd_data TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
         ls_upd_data-dunning_run_date       = '20240310'.
@@ -164,7 +150,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
         ls_upd_data-dunning_level          = '2'.
 
         lo_client->update_entity(
-          it_key     = lt_upd_key
+          is_key     = ls_upd_key
           is_data    = ls_upd_data
           iv_use_put = abap_true ).
 
@@ -183,21 +169,14 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " -----------------------------------------------------------------------
     out->write( '=== DELETE ENTITY (ggf. read-only) ===' ).
     TRY.
-        DATA lt_del_key TYPE zif_odata_v2_client=>tt_key_pairs.
-        lt_del_key = VALUE #(
-          ( name = 'DUNNING_RUN_DATE'           value = '20240310' )
-          ( name = 'DUNNING_RUN'                value = 'HEHO' )
-          ( name = 'FINANCIAL_ACCOUNT_TYPE'     value = 'D' )
-          ( name = 'COMPANY_CODE'               value = '3910' )
-          ( name = 'CUSTOMER'                   value = '0001000010' )
-          ( name = 'SUPPLIER'                   value = '' )
-          ( name = 'ONE_TIME_ACCT_BANK_ACCOUNT' value = '' )
-          ( name = 'CUSTOMER_HEAD_OFFICE'       value = '' )
-          ( name = 'GROUPING_DUNNING_AREA'      value = '' )
-          ( name = 'GROUPING_DUNNING_LEVEL'     value = '' )
-          ( name = 'DUNNING_CLERK'              value = '' ) ).
+        DATA ls_del_key TYPE zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ.
+        ls_del_key-dunning_run_date       = '20240310'.
+        ls_del_key-dunning_run            = 'HEHO'.
+        ls_del_key-financial_account_type = 'D'.
+        ls_del_key-company_code           = '3910'.
+        ls_del_key-customer               = '0001000010'.
 
-        lo_client->delete_entity( lt_del_key ).
+        lo_client->delete_entity( ls_del_key ).
         out->write( 'DELETE ENTITY: Eintrag gelöscht.' ).
 
       CATCH zcx_odata_v2_error INTO DATA(lx5).

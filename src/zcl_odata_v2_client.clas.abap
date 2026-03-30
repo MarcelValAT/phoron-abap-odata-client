@@ -125,7 +125,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~read_entity.
     TRY.
         " Einzelne Entität per Key navigieren und lesen
-          DATA(lo_response) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_read( )->execute( ).
+          DATA(lo_response) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_read( )->execute( ).
 
         lo_response->get_business_data( IMPORTING es_business_data = cs_data ).
 
@@ -170,7 +170,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
           ELSE /iwbep/if_cp_request_update=>gcs_update_semantic-patch ).
 
         " Entität per Key navigieren und updaten
-        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_update( lv_semantic ).
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_update( lv_semantic ).
 
         lo_request->set_business_data( is_data ).
         lo_request->execute( ).
@@ -190,7 +190,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
   METHOD zif_odata_v2_client~delete_entity.
     TRY.
         " Entität per Key navigieren und löschen
-        mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( it_key )->create_request_for_delete( )->execute( ).
+        mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_delete( )->execute( ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
