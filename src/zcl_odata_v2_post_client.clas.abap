@@ -1,10 +1,20 @@
-CLASS zcl_odata_v2_client DEFINITION
+CLASS zcl_odata_v2_post_client DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC.
 
+  " POST-only OData V2 Client — für APIs die alle Writes via POST abwickeln
+  " Beispiel: SAP Timesheet API (API_MANAGE_WORKFORCE_TIMESHEET, SAP_COM_0027)
+  "   sap:updatable='false' sap:deletable='false' — kein PUT/PATCH/DELETE möglich
+  "
+  " Consumer-Konvention:
+  "   create_entity: Operation-Feld im is_data Payload auf 'C' setzen
+  "   update_entity: is_data muss Key-Felder + Operation 'U' enthalten (is_key wird ignoriert)
+  "   delete_entity: is_key muss Operation-Feld auf 'D' gesetzt haben
+
   PUBLIC SECTION.
-    INTERFACES zif_odata_v2_client.
+    INTERFACES zif_odata_v2_read.
+    INTERFACES zif_odata_v2_write.
 
     " Konfiguriert den Client per Communication Arrangement
     METHODS constructor
@@ -23,7 +33,6 @@ CLASS zcl_odata_v2_client DEFINITION
     DATA mo_client_proxy TYPE REF TO /iwbep/if_cp_client_proxy.
     DATA mv_entity_set   TYPE /iwbep/if_cp_runtime_types=>ty_entity_set_name.
 
-    " Baut den OData Filter-Baum aus der generischen Filter-Tabelle
     METHODS build_filter_node
       IMPORTING
         io_filter_factory   TYPE REF TO /iwbep/if_cp_filter_factory
@@ -37,13 +46,12 @@ CLASS zcl_odata_v2_client DEFINITION
 ENDCLASS.
 
 
-CLASS zcl_odata_v2_client IMPLEMENTATION.
+CLASS zcl_odata_v2_post_client IMPLEMENTATION.
 
   METHOD constructor.
     mv_entity_set = iv_entity_set.
 
     TRY.
-        " HTTP-Destination aus Communication Arrangement auflösen
         DATA lo_dest TYPE REF TO if_http_destination.
 
         IF iv_comm_system_id IS INITIAL.
@@ -57,10 +65,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             service_id     = CONV #( iv_service_id ) ).
         ENDIF.
 
-        " HTTP Client erstellen
         DATA(lo_http_client) = cl_web_http_client_manager=>create_by_http_destination( lo_dest ).
 
-        " OData V2 Remote Proxy initialisieren
         mo_client_proxy = /iwbep/cl_cp_factory_remote=>create_v2_remote_proxy(
           EXPORTING
             is_proxy_model_key       = VALUE #(
@@ -84,10 +90,8 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
   METHOD zif_odata_v2_read~read_list.
     TRY.
-        " Request für Read List vorbereiten
         DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_read( ).
 
-        " Optionalen Filter setzen
         IF it_filter IS NOT INITIAL.
           DATA(lo_ff) = lo_request->create_filter_factory( ).
           DATA(lo_filter_node) = build_filter_node(
@@ -98,7 +102,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
           ENDIF.
         ENDIF.
 
-        " Pagination setzen
         IF iv_top IS SUPPLIED AND iv_top > 0.
           lo_request->set_top( iv_top ).
         ENDIF.
@@ -106,7 +109,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
           lo_request->set_skip( iv_skip ).
         ENDIF.
 
-        " Request ausführen und Ergebnis holen
         DATA(lo_response) = lo_request->execute( ).
         lo_response->get_business_data( IMPORTING et_business_data = ct_data ).
 
@@ -124,7 +126,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
   METHOD zif_odata_v2_read~read_entity.
     TRY.
-        " Einzelne Entität per Key navigieren und lesen
         DATA(lo_response) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_read( )->execute( ).
 
         lo_response->get_business_data( IMPORTING es_business_data = cs_data ).
@@ -142,10 +143,9 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
 
   METHOD zif_odata_v2_write~create_entity.
+    " POST mit Operation 'C' — Consumer muss Operation-Feld in is_data gesetzt haben
     TRY.
-        " Neue Entität erstellen (HTTP POST)
         DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
-
         lo_request->set_business_data( is_data ).
         lo_request->execute( ).
 
@@ -154,7 +154,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            iv_operation  = 'CREATE'
+            iv_operation  = 'CREATE_POST'
             iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
@@ -162,16 +162,10 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
 
   METHOD zif_odata_v2_write~update_entity.
+    " POST mit Operation 'U' — is_key wird ignoriert
+    " Consumer muss Key-Felder + Operation 'U' in is_data gesetzt haben
     TRY.
-        " Update-Semantik wählen: PUT oder PATCH
-        DATA(lv_semantic) = COND #(
-          WHEN iv_use_put = abap_true
-          THEN /iwbep/if_cp_request_update=>gcs_update_semantic-put
-          ELSE /iwbep/if_cp_request_update=>gcs_update_semantic-patch ).
-
-        " Entität per Key navigieren und updaten (HTTP PUT/PATCH)
-        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_update( lv_semantic ).
-
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
         lo_request->set_business_data( is_data ).
         lo_request->execute( ).
 
@@ -180,7 +174,7 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            iv_operation  = 'UPDATE'
+            iv_operation  = 'UPDATE_POST'
             iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
@@ -188,16 +182,18 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
 
   METHOD zif_odata_v2_write~delete_entity.
+    " POST mit Operation 'D' — Consumer muss Operation-Feld in is_key auf 'D' gesetzt haben
     TRY.
-        " Entität per Key navigieren und löschen (HTTP DELETE)
-        mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_delete( )->execute( ).
+        DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
+        lo_request->set_business_data( is_key ).
+        lo_request->execute( ).
 
       CATCH /iwbep/cx_cp_remote
             /iwbep/cx_gateway
             cx_web_http_client_error INTO DATA(lx).
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
-            iv_operation  = 'DELETE'
+            iv_operation  = 'DELETE_POST'
             iv_entity_set = CONV #( mv_entity_set )
             previous      = lx.
     ENDTRY.
@@ -205,7 +201,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
 
   METHOD build_filter_node.
-    " Sortiere Filter nach property_path für Gruppierung (mehrere Werte pro Property möglich)
     DATA lt_filter LIKE it_filter.
     lt_filter = it_filter.
     SORT lt_filter BY property_path.
@@ -216,7 +211,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
 
     LOOP AT lt_filter INTO DATA(ls_filter).
 
-      " Neues Property → vorherigen Range-Block als Filter-Node abschließen
       IF ls_filter-property_path <> lv_prev_path AND lv_prev_path IS NOT INITIAL.
         DATA(lo_new_node) = io_filter_factory->create_by_range(
           iv_property_path = lv_prev_path
@@ -231,7 +225,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
         CLEAR lt_range.
       ENDIF.
 
-      " Aktuellen Eintrag zum Range-Block hinzufügen
       APPEND VALUE #(
         sign   = ls_filter-sign
         option = ls_filter-option
@@ -241,7 +234,6 @@ CLASS zcl_odata_v2_client IMPLEMENTATION.
       lv_prev_path = ls_filter-property_path.
     ENDLOOP.
 
-    " Letzten Range-Block abschließen
     IF lt_range IS NOT INITIAL AND lv_prev_path IS NOT INITIAL.
       DATA(lo_last_node) = io_filter_factory->create_by_range(
         iv_property_path = lv_prev_path

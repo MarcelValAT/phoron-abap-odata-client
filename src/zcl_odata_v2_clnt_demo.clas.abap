@@ -19,6 +19,8 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " Client konfigurieren — alle Parameter aus ZCL_ODATA_API_CONFIG
     " -----------------------------------------------------------------------
     DATA lo_client TYPE REF TO zif_odata_v2_client.
+    " Für Read-only APIs:     DATA lo_client TYPE REF TO zif_odata_v2_read.
+    " Für POST-only APIs:     lo_client = NEW zcl_odata_v2_post_client( ... ).
 
     TRY.
         lo_client = NEW zcl_odata_v2_client(
@@ -42,7 +44,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     TRY.
         DATA:
             lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ,
-            lt_filter  TYPE zif_odata_v2_client=>tt_filter.
+            lt_filter  TYPE zif_odata_v2_read=>tt_filter.
 
         " WICHTIG: property_path IMMER GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname-Konvention)
         " z.B. 'DUNNING_RUN' und NICHT 'DunningRun' — sonst: Eigenschaft nicht gefunden!
