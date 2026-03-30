@@ -4,8 +4,8 @@
   <asx:values>
    <VSEOCLASS>
     <CLSNAME>ZCL_ODATA_V2_POST_CLIENT</CLSNAME>
-    <LANGU>E</LANGU>
-    <DESCRIPT>OData V2 POST-only Client (Timesheet pattern)</DESCRIPT>
+    <LANGU>D</LANGU>
+    <DESCRIPT>OData V2 POST-only Client (z.B. Timesheet API)</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

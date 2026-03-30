@@ -4,11 +4,11 @@
   <asx:values>
    <VSEOINTERF>
     <CLSNAME>ZIF_ODATA_V2_READ</CLSNAME>
-    <LANGU>E</LANGU>
-    <DESCRIPT>OData V2 Read Interface (read_list, read_entity)</DESCRIPT>
+    <LANGU>D</LANGU>
+    <DESCRIPT>OData V2 Read-Interface (read_list, read_entity)</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
-    <RELEASE>0</RELEASE>
+    <UNICODE>X</UNICODE>
    </VSEOINTERF>
   </asx:values>
  </asx:abap>

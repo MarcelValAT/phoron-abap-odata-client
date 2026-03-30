@@ -4,11 +4,11 @@
   <asx:values>
    <VSEOINTERF>
     <CLSNAME>ZIF_ODATA_V2_WRITE</CLSNAME>
-    <LANGU>E</LANGU>
-    <DESCRIPT>OData V2 Write Interface (create, update, delete)</DESCRIPT>
+    <LANGU>D</LANGU>
+    <DESCRIPT>OData V2 Write-Interface (create, update, delete)</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
-    <RELEASE>0</RELEASE>
+    <UNICODE>X</UNICODE>
    </VSEOINTERF>
   </asx:values>
  </asx:abap>
