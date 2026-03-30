@@ -15,6 +15,67 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
+
+    " -----------------------------------------------------------------------
+    " Timesheet Client konfigurieren — alle Parameter aus ZCL_ODATA_API_CONFIG
+    " -----------------------------------------------------------------------
+    TRY.
+        DATA lo_client_timesheet TYPE REF TO zif_odata_v2_read.
+
+        lo_client_timesheet = NEW zcl_odata_v2_post_client(
+          iv_comm_scenario  = zcl_odata_api_config=>timesheet_entry-comm_scenario
+          iv_service_id     = zcl_odata_api_config=>timesheet_entry-service_id
+          iv_proxy_model_id = zcl_odata_api_config=>timesheet_entry-proxy_model_id
+          iv_entity_set     = zcl_odata_api_config=>timesheet_entry-entity_set
+          iv_comm_system_id = zcl_odata_api_config=>timesheet_entry-comm_system_id ).
+
+        out->write( 'Timesheet Client initialisiert.' ).
+
+      CATCH zcx_odata_v2_error INTO DATA(lx_init_timesheet).
+        out->write( |Fehler bei Client-Init: { lx_init_timesheet->get_text( ) }| ).
+        RETURN.
+    ENDTRY.
+
+
+    " -----------------------------------------------------------------------
+    " 1) READ LIST — erste 5 Timesheet-Einträge lesen
+    " -----------------------------------------------------------------------
+    TRY.
+        DATA lt_entries_timesheet TYPE zscm_odata_crud_ts=>tyt_time_sheet_entry.   " ← exakten Typ aus SCM prüfen
+
+        lo_client_timesheet->read_list(
+          EXPORTING
+              iv_top = 5
+          CHANGING
+              ct_data = lt_entries_timesheet
+        ).
+
+        out->write( |READ LIST (Timesheet): { lines( lt_entries_timesheet ) } Einträge geladen.| ).
+
+        LOOP AT lt_entries_timesheet INTO DATA(ls_entry_timesheet).
+
+          out->write( |PersonWorkAgreementExternalID: { ls_entry_timesheet-person_work_agreement_exte } | &
+                      |CompanyCode: {                   ls_entry_timesheet-company_code } | &
+                      |TimeSheetRecord: {               ls_entry_timesheet-time_sheet_record } | &
+                      |PersonWorkAgreement: {           ls_entry_timesheet-person_work_agreement } | &
+                      |TimeSheetDate: {                 ls_entry_timesheet-time_sheet_date } | &
+                      |TimeSheetIsReleasedOnSave: {     ls_entry_timesheet-time_sheet_is_released_on } | &
+                      |TimeSheetPredecessorRecord: {    ls_entry_timesheet-time_sheet_predecessor_rec } | &
+                      |TimeSheetStatus: {               ls_entry_timesheet-time_sheet_status } | &
+                      |TimeSheetIsExecutedInTestRun: {  ls_entry_timesheet-time_sheet_is_executed_in } | &
+                      |TimeSheetOperation: {            ls_entry_timesheet-time_sheet_operation } | &
+                      |odata.etag: {                    ls_entry_timesheet-etag }| ).
+        ENDLOOP.
+
+      CATCH zcx_odata_v2_error INTO DATA(lx_timesheet_read_list).
+        out->write( |Fehler: { lx_timesheet_read_list->get_text( ) }| ).
+        IF lx_timesheet_read_list->previous IS BOUND.
+          out->write( |Ursache: { lx_timesheet_read_list->previous->get_text( ) }| ).
+        ENDIF.
+    ENDTRY.
+
+
+
     " -----------------------------------------------------------------------
     " Client konfigurieren — alle Parameter aus ZCL_ODATA_API_CONFIG
     " -----------------------------------------------------------------------
@@ -43,8 +104,8 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     out->write( '=== READ LIST ===' ).
     TRY.
         DATA:
-            lt_entries TYPE TABLE OF zcl_dunningentry_scm=>tys_yy_1_dunning_entry_ext_typ,
-            lt_filter  TYPE zif_odata_v2_read=>tt_filter.
+          lt_entries TYPE zcl_dunningentry_scm=>tyt_yy_1_dunning_entry_ext_typ,
+          lt_filter  TYPE zif_odata_v2_read=>tt_filter.
 
         " WICHTIG: property_path IMMER GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname-Konvention)
         " z.B. 'DUNNING_RUN' und NICHT 'DunningRun' — sonst: Eigenschaft nicht gefunden!

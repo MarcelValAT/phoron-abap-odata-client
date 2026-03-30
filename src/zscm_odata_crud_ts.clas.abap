@@ -160,7 +160,9 @@ CLASS zscm_odata_crud_ts DEFINITION
 ENDCLASS.
 
 
-CLASS zscm_odata_crud_ts IMPLEMENTATION.
+
+CLASS ZSCM_ODATA_CRUD_TS IMPLEMENTATION.
+
 
   METHOD /iwbep/if_v4_mp_basic_pm~define.
 
@@ -457,6 +459,4 @@ CLASS zscm_odata_crud_ts IMPLEMENTATION.
     lo_primitive_property->set_is_technical( ).
 
   ENDMETHOD.
-
-
 ENDCLASS.
