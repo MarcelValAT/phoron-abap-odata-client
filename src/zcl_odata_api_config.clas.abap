@@ -27,16 +27,17 @@ CLASS zcl_odata_api_config DEFINITION
     "     proxy_version  TYPE string VALUE '0001',
     "   END OF <api_name>.
 
-    " SAP Workforce Timesheet API — POST-only (SAP_COM_0027)
-    " Alle Writes via POST — ZCL_ODATA_V2_POST_CLIENT verwenden!
-    " Operation-Feld: time_sheet_operation = 'C' (Create) / 'U' (Update) / 'D' (Delete)
+    " SAP Workforce Timesheet API (API_MANAGE_WORKFORCE_TIMESHEET, SAP_COM_0027)
+    " System: my405410.s4hana.cloud.sap | Outbound Scenario: ZCS_ODATA_CRUD_OB
+    " POST-only für Writes — ZCL_ODATA_V2_POST_CLIENT verwenden!
+    " time_sheet_operation = 'C' (Create) / 'U' (Update) / 'D' (Delete) im Payload setzen
     CONSTANTS:
       BEGIN OF timesheet_entry,
-        comm_scenario  TYPE string VALUE 'SAP_COM_0027',
-        service_id     TYPE string VALUE '<nach Communication Arrangement ermitteln>',
-        proxy_model_id TYPE string VALUE 'ZSCM_TIMESHEET',
-        entity_set     TYPE string VALUE 'TimeSheetEntryCollection',
-        comm_system_id TYPE string VALUE '<aus Phase 2 SAP-Konfiguration>',
+        comm_scenario  TYPE string VALUE 'ZCS_ODATA_CRUD_OB',
+        service_id     TYPE string VALUE 'ZOBS_ODATA_CRUD_REST',
+        proxy_model_id TYPE string VALUE 'ZSCM_ODATA_CRUD_TS',
+        entity_set     TYPE string VALUE 'TimeSheetCollection',
+        comm_system_id TYPE string VALUE 'ZMV_API_INTF_TEST_SYS',
         proxy_version  TYPE string VALUE '0001',
       END OF timesheet_entry.
 
