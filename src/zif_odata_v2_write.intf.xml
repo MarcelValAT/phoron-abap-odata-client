@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_INTF" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOINTERF>
+    <CLSNAME>ZIF_ODATA_V2_WRITE</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>OData V2 Write Interface (create, update, delete)</DESCRIPT>
+    <EXPOSURE>2</EXPOSURE>
+    <STATE>1</STATE>
+    <RELEASE>0</RELEASE>
+   </VSEOINTERF>
+  </asx:values>
+ </asx:abap>
+</abapGit>
