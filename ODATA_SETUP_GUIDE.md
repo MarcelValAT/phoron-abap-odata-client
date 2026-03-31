@@ -302,14 +302,16 @@ Folgendes notieren:
 eine neue `CONSTANTS`-Struktur ergänzen:
 
 ```abap
-" Pfad A Beispiel (SAP Standard Timesheet API):
+" Pfad A Beispiel (SAP Standard Timesheet API — POST-only):
+" entity_set = interne SCM-Konstante (gcs_entity_set), NICHT der OData-Name!
+" POST-only API → ZCL_ODATA_V2_POST_CLIENT verwenden, time_sheet_operation = 'C'/'U'/'D'
 CONSTANTS:
   BEGIN OF timesheet_entry,
-    comm_scenario  TYPE string VALUE 'SAP_COM_0207',
-    service_id     TYPE string VALUE 'API_MANAGE_WORKFORCE_TIMESHEET',
-    proxy_model_id TYPE string VALUE 'ZSCM_TIMESHEET',
-    entity_set     TYPE string VALUE 'TimeSheetEntry',
-    comm_system_id TYPE string VALUE 'ZPHORON_TIMESHEET_SYS',
+    comm_scenario  TYPE string VALUE 'ZCS_ODATA_CRUD_OB',
+    service_id     TYPE string VALUE 'ZOBS_ODATA_CRUD_REST',
+    proxy_model_id TYPE string VALUE 'ZSCM_ODATA_CRUD_TS',
+    entity_set     TYPE string VALUE 'TIME_SHEET_ENTRY_COLLECTIO',
+    comm_system_id TYPE string VALUE 'ZMV_API_INTF_TEST_SYS',
   END OF timesheet_entry.
 ```
 
@@ -340,7 +342,18 @@ Klasse aktivieren (Ctrl+F3). Kein Implementierungscode nötig.
 **Ziel:** Eine schlanke Klasse die den generischen Client nutzt. Der Aufrufer muss nichts
 über OData, HTTP oder Communication Arrangements wissen.
 
-### Schritt 7.1 — Klasse anlegen
+### Schritt 7.1 — Client-Klasse wählen
+
+| API-Typ | Erkennungsmerkmal | Klasse verwenden |
+|---|---|---|
+| Standard CRUD | `sap:updatable="true"` im EDMX | `ZCL_ODATA_V2_CLIENT` |
+| POST-only | `sap:updatable="false" sap:deletable="false"` im EDMX | `ZCL_ODATA_V2_POST_CLIENT` |
+| Read-only | Nur GET-Operationen | `ZCL_ODATA_V2_CLIENT` (nur `read_list`/`read_entity` aufrufen) |
+
+Bei POST-only APIs das Operation-Feld im Payload **vor** dem Aufruf setzen:
+`ls_data-time_sheet_operation = 'C'.  " C=Create, U=Update, D=Delete`
+
+### Schritt 7.2 — Klasse anlegen
 
 Neue ABAP-Klasse `ZCL_<API-KÜRZEL>_READER` (oder `_SERVICE`) anlegen:
 
@@ -353,7 +366,7 @@ CLASS zcl_timesheet_reader DEFINITION PUBLIC FINAL CREATE PUBLIC.
         iv_date_from             TYPE d
         iv_date_to               TYPE d
       RETURNING
-        VALUE(rt_entries) TYPE zscm_timesheet=>tyt_timesheetentry_type
+        VALUE(rt_entries) TYPE zscm_odata_crud_ts=>tyt_time_sheet_entry
       RAISING
         zcx_odata_v2_error.
 ENDCLASS.
@@ -361,14 +374,17 @@ ENDCLASS.
 CLASS zcl_timesheet_reader IMPLEMENTATION.
   METHOD get_entries.
 
-    DATA(lo_client) = NEW zcl_odata_v2_client(
+    " Timesheet = POST-only API → ZCL_ODATA_V2_POST_CLIENT verwenden
+    DATA lo_client TYPE REF TO zif_odata_v2_read.
+    lo_client = NEW zcl_odata_v2_post_client(
       iv_comm_scenario  = zcl_odata_api_config=>timesheet_entry-comm_scenario
       iv_service_id     = zcl_odata_api_config=>timesheet_entry-service_id
       iv_proxy_model_id = zcl_odata_api_config=>timesheet_entry-proxy_model_id
       iv_entity_set     = zcl_odata_api_config=>timesheet_entry-entity_set
       iv_comm_system_id = zcl_odata_api_config=>timesheet_entry-comm_system_id ).
 
-    DATA lt_filter TYPE zif_odata_v2_client=>tt_filter.
+    " Filter-Typ von zif_odata_v2_read (nicht zif_odata_v2_client!)
+    DATA lt_filter TYPE zif_odata_v2_read=>tt_filter.
     lt_filter = VALUE #(
       ( property_path = 'PERSON_WORK_AGREEMENT' sign = 'I' option = 'EQ' low = iv_person_work_agreement )
       ( property_path = 'TIME_SHEET_DATE'        sign = 'I' option = 'BT' low = iv_date_from high = iv_date_to ) ).
@@ -386,7 +402,7 @@ ENDCLASS.
 > - KEIN CamelCase: `'TimeSheetDate'` ❌ → Laufzeitfehler (→ E-11 in ERRORS.md)
 > - Der korrekte Name = ABAP-Feldname im SCM-Struct (z.B. Struct-Feld `time_sheet_date` → Filter `'TIME_SHEET_DATE'`)
 
-### Schritt 7.2 — Aktivieren (Ctrl+F3)
+### Schritt 7.3 — Aktivieren (Ctrl+F3)
 
 ---
 
