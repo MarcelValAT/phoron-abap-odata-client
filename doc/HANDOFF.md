@@ -4,7 +4,8 @@
 
 Generischer OData V2 CRUD-Client für SAP ABAP Cloud (S/4HANA Public Cloud).
 Ziel: Beliebige OData APIs über Communication Arrangements ansprechen ohne Boilerplate.
-Adapter Pattern: ZIF_ODATA_V2_READ + ZIF_ODATA_V2_WRITE als separate Interfaces, zwei Implementierungen (Standard HTTP + POST-only).
+
+**Aktueller Stand (April 2025):** Flaches Interface-Design, Config-Struct, Factory mit Multiton-Cache, spezialisierter Attachment-Client.
 
 ---
 
@@ -25,71 +26,84 @@ Adapter Pattern: ZIF_ODATA_V2_READ + ZIF_ODATA_V2_WRITE als separate Interfaces,
 | Datei | Typ | Beschreibung |
 |---|---|---|
 | `zcx_odata_v2_error.clas.abap` + `.xml` | Exception | HTTP-Status + Operation + Root-Cause-Chaining |
-| `zif_odata_v2_read.intf.abap` + `.xml` | Interface | Read-Kontrakt: `read_list`, `read_entity`, `ty_filter`/`tt_filter` |
-| `zif_odata_v2_write.intf.abap` + `.xml` | Interface | Write-Kontrakt: `create_entity`, `update_entity`, `delete_entity` |
-| `zif_odata_v2_client.intf.abap` + `.xml` | Interface | Thin Combiner: erbt beide Interfaces, Aliases für direkten Aufruf |
-| `zcl_odata_v2_client.clas.abap` + `.xml` | Implementierung | Standard HTTP-Verben (GET/PUT/PATCH/DELETE), `build_filter_node` |
-| `zcl_odata_v2_post_client.clas.abap` + `.xml` | Implementierung | POST-only (alle Writes via POST + Operation-Feld im Payload) |
-| `zcl_odata_api_config.clas.abap` + `.xml` | Config | CONSTANTS-Klasse: `dunning_entry` + `timesheet_entry` Blöcke |
-| `zcl_odata_v2_clnt_demo.clas.abap` + `.xml` | Demo | Timesheet (POST-only READ LIST) + YY1_DUNNINGENTRY (Standard-CRUD) |
-| `zscm_odata_crud_ts.clas.abap` + `.xml` | SCM-Klasse | Generiertes Service Consumption Model für Timesheet API |
-| `zcs_odata_crud_ob.sco1.xml` | Comm. Scenario | Custom Outbound Communication Scenario `ZCS_ODATA_CRUD_OB` |
-| `zobs_odata_crud_rest.sco3.xml` | Outbound Service | Outbound Service `ZOBS_ODATA_CRUD_REST` |
-| `src/package.devc.xml` | abapGit | Package-Beschreibung |
-| `.abapgit.xml` | abapGit | STARTING_FOLDER=/src/, MASTER_LANGUAGE=D |
+| `zif_odata_v2_read.intf.abap` + `.xml` | Interface (legacy) | Read-Kontrakt — nicht mehr aktiv genutzt |
+| `zif_odata_v2_write.intf.abap` + `.xml` | Interface (legacy) | Write-Kontrakt — nicht mehr aktiv genutzt |
+| `zif_odata_v2_client.intf.abap` + `.xml` | **Haupt-Interface** | Alle 5 Methoden + `ty_config`/`tt_filter` direkt |
+| `zcl_odata_v2_client.clas.abap` + `.xml` | Implementierung | Standard HTTP-Verben (GET/PUT/PATCH/DELETE) |
+| `zcl_odata_v2_post_client.clas.abap` + `.xml` | Implementierung | POST-only (alle Writes via POST + Operation-Feld) |
+| `zcl_odata_client_factory.clas.abap` + `.xml` | **Factory** | Multiton-Cache: gleiche Config = gleiche Instanz |
+| `zcl_odata_api_config.clas.abap` + `.xml` | Config | CONSTANTS-Klasse: `dunning_entry`, `timesheet_entry`, `attachment_srv` |
+| `zcl_odata_v2_clnt_demo.clas.abap` + `.xml` | Demo | Timesheet, Dunning CRUD, FI Attachment Demo |
+| `zcl_attachment_v2_client.clas.abap` + `.xml` | **Attachment-Client** | Spezialisiert: `GetAllOriginals` + Binary Download |
+| `zscm_odata_crud_ts.clas.abap` + `.xml` | SCM | Generiertes Service Consumption Model: Timesheet |
+| `zcl_scm_odata_crud_attm.clas.abap` + `.xml` | SCM | Generiertes Service Consumption Model: Attachment |
+| `zcs_odata_crud_ob.sco1.xml` | Comm. Scenario | `ZCS_ODATA_CRUD_OB` (Timesheet + Attachment, shared) |
+| `zobs_odata_crud_rest.sco3.xml` | Outbound Service | `ZOBS_ODATA_CRUD_REST` (Timesheet) |
+| `zobs_odata_crud_attm_rest.sco3.xml` | Outbound Service | `ZOBS_ODATA_CRUD_ATTM_REST` (Attachment) |
 
 ---
 
 ## Architektur-Übersicht
 
 ```
-ZIF_ODATA_V2_READ (Interface)
-  ├── ty_filter / tt_filter  — generischer Filter (property_path UPPERCASE, sign/option/low/high)
+ZIF_ODATA_V2_CLIENT (Haupt-Interface — einziger öffentlicher Typ)
+  ├── ty_config   — Konfigurations-Struct
+  ├── tt_filter   — Filter-Tabellen-Typ
   ├── read_list(it_filter, iv_top, iv_skip, CHANGING ct_data ANY TABLE)
-  └── read_entity(is_key ANY, CHANGING cs_data ANY)
-
-ZIF_ODATA_V2_WRITE (Interface)
+  ├── read_entity(is_key ANY, CHANGING cs_data ANY)
   ├── create_entity(is_data ANY)
   ├── update_entity(is_key ANY, is_data ANY, iv_use_put)
   └── delete_entity(is_key ANY)
 
-ZIF_ODATA_V2_CLIENT (Thin Combiner — erbt beide)
-  → Aliases: read_list, read_entity, create_entity, update_entity, delete_entity
-  → Aliases: ty_filter, tt_filter
-
 ZCL_ODATA_V2_CLIENT (implementiert ZIF_ODATA_V2_CLIENT)
   → Standard HTTP-Verben: GET (read), POST (create), PUT/PATCH (update), DELETE (delete)
-  constructor(iv_comm_scenario, iv_service_id, iv_proxy_model_id,
-              iv_entity_set, [iv_comm_system_id], [iv_proxy_version='0001'])
+  constructor(is_config TYPE zif_odata_v2_client=>ty_config)
   → cl_http_destination_provider=>create_by_comm_arrangement()
-  → cl_web_http_client_manager=>create_by_http_destination()
   → /iwbep/cl_cp_factory_remote=>create_v2_remote_proxy()
 
-ZCL_ODATA_V2_POST_CLIENT (implementiert ZIF_ODATA_V2_READ + ZIF_ODATA_V2_WRITE)
-  → Gleicher Constructor wie ZCL_ODATA_V2_CLIENT
+ZCL_ODATA_V2_POST_CLIENT (implementiert ZIF_ODATA_V2_CLIENT)
+  → Gleicher Constructor
   → read_list / read_entity: identisch (GET)
-  → create_entity: POST mit Operation 'C' im Payload
-  → update_entity: POST mit Operation 'U' im Payload (is_key ignoriert)
-  → delete_entity: POST mit Operation 'D' im Payload
-  → Verwendung: APIs mit sap:updatable="false" sap:deletable="false"
+  → create/update/delete: alle via POST + Operation-Feld im Payload
+
+ZCL_ODATA_CLIENT_FACTORY (Multiton)
+  CLASS-METHODS get_client(is_config, iv_post_only)
+  → Cache-Schlüssel: comm_scenario#entity_set#post_only
+  → Erstellt zcl_odata_v2_client ODER zcl_odata_v2_post_client
+
+ZCL_ATTACHMENT_V2_CLIENT (spezialisiert, kein Interface)
+  constructor(is_config TYPE zif_odata_v2_client=>ty_config)
+  get_fi_doc_attachments(iv_bukrs, iv_belnr, iv_gjahr) → tyt_attachment_content
+  download_attachment(is_attachment) → xstring
+  CLASS-METHODS build_bkpf_key(iv_bukrs, iv_belnr, iv_gjahr) → string
 
 ZCL_ODATA_API_CONFIG (CONSTANTS-Klasse)
-  dunning_entry:
-    comm_scenario  = 'ZDUNNING_OUTBOUND'
-    service_id     = 'ZOBS_DUNNING_API_REST'
-    proxy_model_id = 'ZSCM_DUNNINGENTRY'
-    entity_set     = 'YY_1_DUNNING_ENTRY_EXT'
-    comm_system_id = 'DUNNING_ENTRY_SYS'
-  timesheet_entry:
-    comm_scenario  = 'ZCS_ODATA_CRUD_OB'
-    service_id     = 'ZOBS_ODATA_CRUD_REST'
-    proxy_model_id = 'ZSCM_ODATA_CRUD_TS'
-    entity_set     = 'TIME_SHEET_ENTRY_COLLECTIO'   ← interner SCM-Name, nicht OData-Name!
-    comm_system_id = 'ZMV_API_INTF_TEST_SYS'
+  dunning_entry / timesheet_entry / attachment_srv
+  → alle Felder gleich: comm_scenario, service_id, proxy_model_id, entity_set, comm_system_id, proxy_version
+```
 
-ZCX_ODATA_V2_ERROR (cx_static_check)
-  get_text() → "[OPERATION] [ENTITY_SET] HTTP [STATUS]: [root cause]"
-  Felder: mv_operation, mv_entity_set, mv_http_status, previous (Root-Cause-Chain)
+### Verwendungsmuster
+
+```abap
+" Standard — 1 Zeile statt 5:
+DATA(lo_client) = zcl_odata_client_factory=>get_client(
+  is_config = zcl_odata_api_config=>dunning_entry ).
+
+lo_client->read_list( EXPORTING it_filter = lt_filter CHANGING ct_data = lt_entries ).
+lo_client->read_entity( EXPORTING is_key = lt_entries[ 1 ] CHANGING cs_data = ls_result ).
+lo_client->create_entity( ls_new ).
+lo_client->update_entity( is_key = ls_key is_data = ls_upd ).
+lo_client->delete_entity( ls_del_key ).
+
+" POST-only (Timesheet):
+DATA(lo_ts) = zcl_odata_client_factory=>get_client(
+  is_config    = zcl_odata_api_config=>timesheet_entry
+  iv_post_only = abap_true ).
+
+" Attachment (FI-Beleg):
+DATA(lo_attm) = NEW zcl_attachment_v2_client( zcl_odata_api_config=>attachment_srv ).
+DATA(lt_attm) = lo_attm->get_fi_doc_attachments( iv_bukrs='3910' iv_belnr='0000123456' iv_gjahr='2024' ).
+DATA(lv_pdf)  = lo_attm->download_attachment( lt_attm[ 1 ] ).
 ```
 
 ---
@@ -122,13 +136,31 @@ Proxy Model ID: ZSCM_ODATA_CRUD_TS
 Entity Set:     TIME_SHEET_ENTRY_COLLECTIO   ← gcs_entity_set Konstante aus SCM
 Comm System ID: ZMV_API_INTF_TEST_SYS
 Client-Klasse:  ZCL_ODATA_V2_POST_CLIENT
-
-SAP Standard Scenario: SAP_COM_0027 (INBOUND only — nicht direkt verwendbar!)
-Arrangement: ZMV_API_INTF_TEST_COM_0027_CA  (Inbound-Arrangement für SAP_COM_0027)
 Operation-Feld: time_sheet_operation = 'C' / 'U' / 'D'
+```
+
+### Attachment Service (API_CV_ATTACHMENT_SRV — FI-Beleg-Anhänge)
+
+```
+Comm Scenario:  ZCS_ODATA_CRUD_OB   ← gleiche wie Timesheet (shared!)
+Service ID:     ZOBS_ODATA_CRUD_ATTM_REST
+Proxy Model ID: ZCL_SCM_ODATA_CRUD_ATTM
+Entity Set:     ATTACHMENT_HARMONIZED_OPER   ← interner SCM-Name
+Comm System ID: ZMV_API_INTF_TEST_SYS
+SAP Scenario:   SAP_COM_0002 (Finance – Posting Integration)
+Client-Klasse:  ZCL_ATTACHMENT_V2_CLIENT (spezialisiert)
 SCM-Typen:
-  Tabellen-Typ:  zscm_odata_crud_ts=>tyt_time_sheet_entry
-  Struktur-Typ:  zscm_odata_crud_ts=>tys_time_sheet_entry
+  Anhang-Liste: zcl_scm_odata_crud_attm=>tyt_attachment_content
+  Anhang-Struct: zcl_scm_odata_crud_attm=>tys_attachment_content
+  FunctionImport: zcl_scm_odata_crud_attm=>gcs_function_import-get_all_originals
+  FunctionImport-Params: zcl_scm_odata_crud_attm=>tys_parameters_3
+
+Testdaten:
+  Buchungskreis: 3910
+  Belegnummer:   in 'Journalbelege verwalten' — Beleg mit Anhang suchen
+  Geschäftsjahr: 2024
+  → Anhang in App hochladen (Reiter 'Anhänge')
+  → LinkedSAPObjectKey-Format: Bukrs(4)+Belnr(10 padded)+Gjahr(4) = 18 Zeichen
 ```
 
 ---
@@ -137,44 +169,34 @@ SCM-Typen:
 
 ### 1. [KRITISCH] `TYPE ANY` / `TYPE ANY TABLE` im Interface — ABAP Cloud ATC-Risiko
 
-**Dateien:** `zif_odata_v2_read.intf.abap`, `zif_odata_v2_write.intf.abap`
-**Problem:** Generische Typen (`TYPE ANY TABLE`, `TYPE ANY`) in PUBLIC Interface-Methoden.
-**Risiko:** ABAP Cloud ATC-Check kann diese Signatur ablehnen (je nach Release-Stand).
+**Dateien:** `zif_odata_v2_client.intf.abap`
+**Problem:** Generische Typen in PUBLIC Interface-Methoden.
 **Status:** Im System my405410 getestet — falls Aktivierung funktioniert, kein Fix nötig.
-**Möglicher Fix:** Interface-Methoden auf `TYPE REF TO data` umstellen + ASSIGN FIELD-SYMBOL in Implementierung.
 
 ### 2. [KRITISCH] `navigate_with_key` — Signatur im Zielsystem prüfen
 
 **Datei:** `zcl_odata_v2_client.clas.abap`, Methoden `read_entity`, `update_entity`, `delete_entity`
 **Problem:** `is_key TYPE ANY` direkt an `navigate_with_key()` übergeben.
-**Prüfung:** In ADT `/iwbep/if_cp_resource_entity_set` → `navigate_with_key` → Parameter-Typ ansehen.
 
 ### 3. [IMPORTANT] Demo-Klasse hat externe Abhängigkeit (Dunning)
 
 **Datei:** `zcl_odata_v2_clnt_demo.clas.abap`
 **Problem:** Referenziert `zcl_dunningentry_scm` aus `phoron-ar-automation`. Nur aktivierbar wenn beide Pakete deployed sind.
-**Timesheet-Teil ist standalone** — der Dunning-Teil benötigt das ar-automation Paket.
 
 ### 4. [NICE-TO-HAVE] `create_by_range` Range-Typ Kompatibilität
 
 **Datei:** `zcl_odata_v2_client.clas.abap`, Methode `build_filter_node`
-**Problem:** Lokaler Range-Typ vs. `/iwbep/t_cp_range_primitive`.
-**Prüfung:** Beim ersten `read_list` mit Filter prüfen ob Laufzeitfehler auftritt.
+**Problem:** Lokaler Range-Typ vs. `/iwbep/t_cp_range_primitive`. Beim ersten `read_list` mit Filter testen.
 
 ---
 
 ## Wichtige Referenz-Dateien
 
-Für Weiterentwicklung / Bugfixing:
-
 1. **Alle ABAP-Quelldateien** in `phoron-abap-odata-client/src/*.abap`
-2. **EDMX Timesheet API**: `doc/API_MANAGE_WORKFORCE_TIMESHEET.edmx`
-3. **SAP CRUD Sample Codes** (zeigen wie navigate_with_key verwendet wird):
-   `ar-automation/doc/CRUD_Sample_codes.md`
-4. **Bestehende Implementierung** (Muster für Proxy-Setup + Filter):
-   `ar-automation/src/src/zcl_dunning_entry_reader.clas.abap`
+2. **EDMX Attachment API**: `doc/API_CV_ATTACHMENT_SRV_0001.edmx`
+3. **EDMX Timesheet API**: `doc/API_MANAGE_WORKFORCE_TIMESHEET.edmx`
+4. **Attachment API Doku**: `doc/ATTACHMENT_API.md`
 5. **Setup-Anleitung**: `ODATA_SETUP_GUIDE.md`
-6. **Bekannte Fehler**: `skills/abapgit-doctor/ERRORS.md`
 
 ---
 
@@ -199,6 +221,7 @@ Kurzform: [ODATA_SETUP_GUIDE.md](../ODATA_SETUP_GUIDE.md)
 2. Outbound Scenario + Outbound Service in ADT anlegen (`ZCS_..._OB` + `ZOBS_..._REST`)
 3. Communication Arrangement anlegen (Outbound)
 4. EDMX herunterladen → SCM generieren
-5. Neuen Block in `ZCL_ODATA_API_CONFIG` ergänzen
-6. Consumer-Klasse schreiben
-7. POST-only? → `ZCL_ODATA_V2_POST_CLIENT` verwenden statt `ZCL_ODATA_V2_CLIENT`
+5. Neuen `CONSTANTS BEGIN OF <api_name>` Block in `ZCL_ODATA_API_CONFIG` ergänzen
+6. Consumer-Code via Factory: `zcl_odata_client_factory=>get_client( zcl_odata_api_config=><api_name> )`
+7. POST-only? → `iv_post_only = abap_true`
+8. FunctionImport + Binary Stream? → Spezialisierte Klasse analog `ZCL_ATTACHMENT_V2_CLIENT`

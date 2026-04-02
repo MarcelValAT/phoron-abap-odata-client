@@ -8,6 +8,11 @@ CLASS zcl_odata_v2_clnt_demo DEFINITION
 
   PROTECTED SECTION.
   PRIVATE SECTION.
+    " Demo-Methode für FI-Beleg-Anhänge (API_CV_ATTACHMENT_SRV)
+    " Voraussetzung: Beleg in 'Journalbelege verwalten' öffnen → Reiter 'Anhänge' → PDF hochladen
+    METHODS demo_fi_attachment
+      IMPORTING out TYPE REF TO if_oo_adt_classrun_out.
+
 ENDCLASS.
 
 
@@ -15,19 +20,16 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
 
   METHOD if_oo_adt_classrun~main.
 
-
     " -----------------------------------------------------------------------
     " Timesheet Client konfigurieren — alle Parameter aus ZCL_ODATA_API_CONFIG
+    " → zif_odata_v2_client verwenden (nicht zif_odata_v2_read) damit Read+Write erreichbar
     " -----------------------------------------------------------------------
     TRY.
-        DATA lo_client_timesheet TYPE REF TO zif_odata_v2_read.
+        DATA lo_client_timesheet TYPE REF TO zif_odata_v2_client.
 
-        lo_client_timesheet = NEW zcl_odata_v2_post_client(
-          iv_comm_scenario  = zcl_odata_api_config=>timesheet_entry-comm_scenario
-          iv_service_id     = zcl_odata_api_config=>timesheet_entry-service_id
-          iv_proxy_model_id = zcl_odata_api_config=>timesheet_entry-proxy_model_id
-          iv_entity_set     = zcl_odata_api_config=>timesheet_entry-entity_set
-          iv_comm_system_id = zcl_odata_api_config=>timesheet_entry-comm_system_id ).
+        lo_client_timesheet = zcl_odata_client_factory=>get_client(
+          is_config    = zcl_odata_api_config=>timesheet_entry
+          iv_post_only = abap_true ).
 
         out->write( 'Timesheet Client initialisiert.' ).
 
@@ -41,7 +43,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     " 1) READ LIST — erste 5 Timesheet-Einträge lesen
     " -----------------------------------------------------------------------
     TRY.
-        DATA lt_entries_timesheet TYPE zscm_odata_crud_ts=>tyt_time_sheet_entry.   " ← exakten Typ aus SCM prüfen
+        DATA lt_entries_timesheet TYPE zscm_odata_crud_ts=>tyt_time_sheet_entry.
 
         lo_client_timesheet->read_list(
           EXPORTING
@@ -77,21 +79,18 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
 
 
     " -----------------------------------------------------------------------
-    " Client konfigurieren — alle Parameter aus ZCL_ODATA_API_CONFIG
+    " Dunning Client via Factory — alle Parameter aus ZCL_ODATA_API_CONFIG
     " -----------------------------------------------------------------------
     DATA lo_client TYPE REF TO zif_odata_v2_client.
-    " Für Read-only APIs:     DATA lo_client TYPE REF TO zif_odata_v2_read.
-    " Für POST-only APIs:     lo_client = NEW zcl_odata_v2_post_client( ... ).
+    " Für Read-only APIs:   DATA lo_client TYPE REF TO zif_odata_v2_client.
+    " Für POST-only APIs:   iv_post_only = abap_true
 
     TRY.
-        lo_client = NEW zcl_odata_v2_client(
-          iv_comm_scenario  = zcl_odata_api_config=>dunning_entry-comm_scenario
-          iv_service_id     = zcl_odata_api_config=>dunning_entry-service_id
-          iv_proxy_model_id = zcl_odata_api_config=>dunning_entry-proxy_model_id
-          iv_entity_set     = zcl_odata_api_config=>dunning_entry-entity_set
-          iv_comm_system_id = zcl_odata_api_config=>dunning_entry-comm_system_id ).
+        lo_client = zcl_odata_client_factory=>get_client(
+          is_config    = zcl_odata_api_config=>dunning_entry
+          iv_post_only = abap_false ).
 
-        out->write( 'Client initialisiert.' ).
+        out->write( 'Dunning Client initialisiert.' ).
 
       CATCH zcx_odata_v2_error INTO DATA(lx_init).
         out->write( |Fehler bei Client-Init: { lx_init->get_text( ) }| ).
@@ -105,7 +104,7 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
     TRY.
         DATA:
           lt_entries TYPE zcl_dunningentry_scm=>tyt_yy_1_dunning_entry_ext_typ,
-          lt_filter  TYPE zif_odata_v2_read=>tt_filter.
+          lt_filter  TYPE zif_odata_v2_client=>tt_filter.
 
         " WICHTIG: property_path IMMER GROSSBUCHSTABEN mit Unterstrichen (ABAP-Feldname-Konvention)
         " z.B. 'DUNNING_RUN' und NICHT 'DunningRun' — sonst: Eigenschaft nicht gefunden!
@@ -242,8 +241,80 @@ CLASS zcl_odata_v2_clnt_demo IMPLEMENTATION.
         ENDIF.
     ENDTRY.
 
+    " -----------------------------------------------------------------------
+    " 6) FI-Beleg-Anhänge (API_CV_ATTACHMENT_SRV)
+    " -----------------------------------------------------------------------
+    out->write( '=== FI ATTACHMENT DEMO ===' ).
+    demo_fi_attachment( out ).
+
     out->write( '=== Demo abgeschlossen ===' ).
 
+  ENDMETHOD.
+
+
+  METHOD demo_fi_attachment.
+    " -----------------------------------------------------------------------
+    " Demo: FI-Beleg-Anhänge abrufen und binären Inhalt herunterladen
+    "
+    " VORAUSSETZUNG (einmalig in SAP):
+    "   1. App 'Journalbelege verwalten' öffnen
+    "   2. Beleg mit Buchungskreis 3910 suchen
+    "   3. Reiter 'Anhänge' → PDF hochladen
+    "   4. Belegnummer (10-stellig intern) und Geschäftsjahr notieren
+    "
+    " TESTDATEN — anpassen:
+    DATA(lv_bukrs) = '3910'.
+    DATA(lv_belnr) = '0000000000'.   " ← echte Belegnummer eintragen (10-stellig, führende Nullen)
+    DATA(lv_gjahr) = '2024'.
+    " -----------------------------------------------------------------------
+
+    " LinkedSAPObjectKey prüfen
+    DATA(lv_key) = zcl_attachment_v2_client=>build_bkpf_key(
+      iv_bukrs = lv_bukrs
+      iv_belnr = lv_belnr
+      iv_gjahr = lv_gjahr ).
+    out->write( |LinkedSAPObjectKey: '{ lv_key }' ({ strlen( lv_key ) } Zeichen)| ).
+
+    TRY.
+        " Schritt 1: Client erstellen
+        DATA(lo_attm) = NEW zcl_attachment_v2_client(
+          is_config = zcl_odata_api_config=>attachment_srv ).
+
+        out->write( 'Attachment Client initialisiert.' ).
+
+        " Schritt 2: Anhang-Metadaten abrufen (GetAllOriginals)
+        DATA(lt_attachments) = lo_attm->get_fi_doc_attachments(
+          iv_bukrs = lv_bukrs
+          iv_belnr = lv_belnr
+          iv_gjahr = lv_gjahr ).
+
+        out->write( |Anhänge gefunden: { lines( lt_attachments ) }| ).
+
+        LOOP AT lt_attachments INTO DATA(ls_attm).
+          out->write( |  Datei: { ls_attm-file_name } | &
+                      |Typ: { ls_attm-mime_type } | &
+                      |Größe: { ls_attm-file_size } Byte| ).
+        ENDLOOP.
+
+        " Schritt 3: Ersten Anhang herunterladen
+        IF lt_attachments IS INITIAL.
+          out->write( 'Keine Anhänge gefunden — Beleg in "Journalbelege verwalten" prüfen.' ).
+          RETURN.
+        ENDIF.
+
+        out->write( 'Lade ersten Anhang herunter...' ).
+        DATA(lv_content) = lo_attm->download_attachment( lt_attachments[ 1 ] ).
+
+        out->write( |Anhang heruntergeladen: { xstrlen( lv_content ) } Bytes.| ).
+        out->write( |Dateiname: { lt_attachments[ 1 ]-file_name }| ).
+        out->write( 'Inhalt kann als xstring direkt als Email-Anhang genutzt werden.' ).
+
+      CATCH zcx_odata_v2_error INTO DATA(lx).
+        out->write( |FI Attachment Fehler: { lx->get_text( ) }| ).
+        IF lx->previous IS BOUND.
+          out->write( |Ursache: { lx->previous->get_text( ) }| ).
+        ENDIF.
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

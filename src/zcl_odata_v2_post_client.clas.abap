@@ -13,18 +13,14 @@ CLASS zcl_odata_v2_post_client DEFINITION
   "   delete_entity: is_key muss Operation-Feld auf 'D' gesetzt haben
 
   PUBLIC SECTION.
-    INTERFACES zif_odata_v2_read.
-    INTERFACES zif_odata_v2_write.
+    INTERFACES zif_odata_v2_client.
 
     " Konfiguriert den Client per Communication Arrangement
+    " Alle Parameter via Config-Struct aus ZCL_ODATA_API_CONFIG übergeben:
+    "   lo_client = NEW zcl_odata_v2_post_client( is_config = zcl_odata_api_config=>timesheet_entry ).
     METHODS constructor
       IMPORTING
-        iv_comm_scenario   TYPE string
-        iv_service_id      TYPE string
-        iv_proxy_model_id  TYPE string
-        iv_entity_set      TYPE string
-        iv_comm_system_id  TYPE string OPTIONAL
-        iv_proxy_version   TYPE string DEFAULT '0001'
+        is_config TYPE zif_odata_v2_client=>ty_config
       RAISING
         zcx_odata_v2_error.
 
@@ -36,7 +32,7 @@ CLASS zcl_odata_v2_post_client DEFINITION
     METHODS build_filter_node
       IMPORTING
         io_filter_factory   TYPE REF TO /iwbep/if_cp_filter_factory
-        it_filter           TYPE zif_odata_v2_read=>tt_filter
+        it_filter           TYPE zif_odata_v2_client=>tt_filter
       RETURNING
         VALUE(ro_node)      TYPE REF TO /iwbep/if_cp_filter_node
       RAISING
@@ -49,20 +45,20 @@ ENDCLASS.
 CLASS zcl_odata_v2_post_client IMPLEMENTATION.
 
   METHOD constructor.
-    mv_entity_set = iv_entity_set.
+    mv_entity_set = is_config-entity_set.
 
     TRY.
         DATA lo_dest TYPE REF TO if_http_destination.
 
-        IF iv_comm_system_id IS INITIAL.
+        IF is_config-comm_system_id IS INITIAL.
           lo_dest = cl_http_destination_provider=>create_by_comm_arrangement(
-            comm_scenario = CONV #( iv_comm_scenario )
-            service_id    = CONV #( iv_service_id ) ).
+            comm_scenario = CONV #( is_config-comm_scenario )
+            service_id    = CONV #( is_config-service_id ) ).
         ELSE.
           lo_dest = cl_http_destination_provider=>create_by_comm_arrangement(
-            comm_scenario  = CONV #( iv_comm_scenario )
-            comm_system_id = CONV #( iv_comm_system_id )
-            service_id     = CONV #( iv_service_id ) ).
+            comm_scenario  = CONV #( is_config-comm_scenario )
+            comm_system_id = CONV #( is_config-comm_system_id )
+            service_id     = CONV #( is_config-service_id ) ).
         ENDIF.
 
         DATA(lo_http_client) = cl_web_http_client_manager=>create_by_http_destination( lo_dest ).
@@ -71,8 +67,10 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
           EXPORTING
             is_proxy_model_key       = VALUE #(
               repository_id       = 'DEFAULT'
-              proxy_model_id      = iv_proxy_model_id
-              proxy_model_version = iv_proxy_version )
+              proxy_model_id      = is_config-proxy_model_id
+              proxy_model_version = COND #( WHEN is_config-proxy_version IS INITIAL
+                                            THEN '0001'
+                                            ELSE is_config-proxy_version ) )
             io_http_client           = lo_http_client
             iv_relative_service_root = '' ).
 
@@ -82,13 +80,13 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
         RAISE EXCEPTION TYPE zcx_odata_v2_error
           EXPORTING
             iv_operation  = 'INIT'
-            iv_entity_set = iv_entity_set
+            iv_entity_set = is_config-entity_set
             previous      = lx.
     ENDTRY.
   ENDMETHOD.
 
 
-  METHOD zif_odata_v2_read~read_list.
+  METHOD zif_odata_v2_client~read_list.
     TRY.
         DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_read( ).
 
@@ -124,7 +122,7 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_odata_v2_read~read_entity.
+  METHOD zif_odata_v2_client~read_entity.
     TRY.
         DATA(lo_response) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->navigate_with_key( is_key )->create_request_for_read( )->execute( ).
 
@@ -142,7 +140,7 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_odata_v2_write~create_entity.
+  METHOD zif_odata_v2_client~create_entity.
     " POST mit Operation 'C' — Consumer muss Operation-Feld in is_data gesetzt haben
     TRY.
         DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
@@ -161,7 +159,7 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_odata_v2_write~update_entity.
+  METHOD zif_odata_v2_client~update_entity.
     " POST mit Operation 'U' — is_key wird ignoriert
     " Consumer muss Key-Felder + Operation 'U' in is_data gesetzt haben
     TRY.
@@ -181,7 +179,7 @@ CLASS zcl_odata_v2_post_client IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_odata_v2_write~delete_entity.
+  METHOD zif_odata_v2_client~delete_entity.
     " POST mit Operation 'D' — Consumer muss Operation-Feld in is_key auf 'D' gesetzt haben
     TRY.
         DATA(lo_request) = mo_client_proxy->create_resource_for_entity_set( mv_entity_set )->create_request_for_create( ).
